@@ -121,6 +121,14 @@ def calcular_eficiencia(pct):
 
 letra, color_letra, etiqueta_letra = calcular_eficiencia(porcentaje_desperdicio)
 
+# --- Traducir CO2 a algo mas relatable ---
+def co2_a_relatable(co2_kg):
+    arbol_kg_anio = 21  # kg de CO2 que absorbe un arbol promedio por año
+    km_por_kg = 1 / 0.192  # km recorridos en auto promedio por kg de CO2
+    dias_arbol = (co2_kg / arbol_kg_anio) * 365
+    km_auto = co2_kg * km_por_kg
+    return dias_arbol, km_auto
+
 # ======================================================================
 # ENCABEZADO
 # ======================================================================
@@ -146,7 +154,7 @@ with col_sello:
     </div>
     """, unsafe_allow_html=True)
 
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📈 Gráficos", "🔍 Patrones de consumo", "📝 Informe completo", "📋 Datos", "ℹ️ Proyecto", "🎮 Simulador"])
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["📈 Gráficos", "🔍 Patrones de consumo", "📝 Informe completo", "📋 Datos", "ℹ️ Proyecto", "🎮 Simulador", "🏠 Para vos"])
 
 # ======================================================================
 # TAB 1 - GRAFICOS
@@ -228,6 +236,9 @@ with tab3:
     e1.metric("Energía del día", f"{energia_kwh:.2f} kWh")
     e2.metric("CO₂ equivalente evitable", f"{co2_kg:.2f} kg")
     e3.metric("Proyección mensual (20 días)", f"{co2_mensual:.1f} kg CO₂")
+    dias_arbol_dia, km_auto_dia = co2_a_relatable(co2_kg)
+    dias_arbol_mes, km_auto_mes = co2_a_relatable(co2_mensual)
+    st.caption(f"🌳 Eso equivale a lo que absorbe un árbol en **{dias_arbol_dia:.0f} días**, o a manejar un auto **{km_auto_dia:.1f} km**. Proyectado al mes: **{dias_arbol_mes:.0f} días de un árbol**, o **{km_auto_mes:.0f} km en auto**.")
     st.caption("Cálculo orientativo con factor promedio de 0.4 kg CO₂/kWh para la red argentina. Estimación ilustrativa, no medición directa de emisiones.")
 
     st.markdown("---")
@@ -479,12 +490,93 @@ with tab6:
         st.markdown("---")
         st.metric("💰 Ahorro estimado en pesos", f"${ahorro_pesos:,.0f} ARS/año")
         st.metric("🌱 CO₂ evitado estimado", f"{co2_evitado_sim:,.0f} kg/año")
+        dias_arbol_sim, km_auto_sim = co2_a_relatable(co2_evitado_sim)
+        st.caption(f"🌳 Equivale a lo que absorbe un árbol en {dias_arbol_sim:.0f} días, o manejar {km_auto_sim:.0f} km en auto.")
 
     st.info(
         "ℹ️ El % de ahorro es un valor orientativo y ajustable, inspirado en el hallazgo real de este "
         "proyecto sobre la relación entre luz natural y consumo eléctrico. No representa una medición "
         "directa, sino una proyección para explorar distintos escenarios."
     )
+
+# ======================================================================
+# TAB 7 - PARA EL PUBLICO GENERAL
+# ======================================================================
+with tab7:
+    st.subheader("🏠 ¿Cuánto gastás vos en tu casa?")
+    st.caption("Tildá los aparatos que tenés en tu casa y mirá cuánto consumen por mes, sin necesidad de saber nada de electricidad.")
+
+    aparatos_hogar = {
+        "🧊 Heladera": 108,
+        "❄️ Aire acondicionado": 180,
+        "📺 TV": 12,
+        "💻 Computadora": 18,
+        "🧺 Lavarropas": 7.5,
+        "🍕 Microondas": 6,
+        "🫖 Pava eléctrica": 11.25,
+        "👕 Plancha de ropa": 9,
+        "🌀 Ventilador": 5.4,
+        "💡 Iluminación (5 focos LED)": 7.5,
+        "📱 Cargador de celular": 0.45,
+    }
+
+    seleccionados = []
+    cols_check = st.columns(3)
+    for i, (nombre, kwh_mes) in enumerate(aparatos_hogar.items()):
+        with cols_check[i % 3]:
+            if st.checkbox(nombre, key=f"aparato_{i}"):
+                seleccionados.append((nombre, kwh_mes))
+
+    total_kwh_mes = sum(k for _, k in seleccionados)
+    precio_kwh_casa = st.number_input("Precio del kWh en tu zona ($ARS)", value=150.0, step=10.0, key="precio_casa")
+    total_pesos_mes = total_kwh_mes * precio_kwh_casa
+
+    st.markdown("---")
+    r1, r2 = st.columns(2)
+    r1.metric("⚡ Tu consumo estimado", f"{total_kwh_mes:.1f} kWh/mes")
+    r2.metric("💰 Tu gasto estimado", f"${total_pesos_mes:,.0f} ARS/mes")
+    st.caption("Valores orientativos basados en horas de uso típicas de cada aparato en un hogar promedio.")
+
+    st.markdown("---")
+    st.subheader("⚡🆚⚡ ¿Cuál gasta más?")
+    st.caption("Elegí cuál de los dos aparatos creés que consume más energía, y descubrí la respuesta.")
+
+    import random
+    aparatos_juego = {
+        "🧊 Heladera": 150, "❄️ Aire acondicionado": 1500, "💇 Secador de pelo": 1200,
+        "🫖 Pava eléctrica": 1500, "🍕 Microondas": 1000, "👕 Plancha de ropa": 1000,
+        "📺 TV LED": 100, "💻 Computadora de escritorio": 200, "💡 Lamparita LED": 10,
+        "🌀 Ventilador": 60, "📱 Cargador de celular": 5, "🧺 Lavarropas": 500,
+    }
+
+    if "par_juego" not in st.session_state:
+        st.session_state["par_juego"] = random.sample(list(aparatos_juego.items()), 2)
+
+    (nombre_a, watts_a), (nombre_b, watts_b) = st.session_state["par_juego"]
+
+    jc1, jc2 = st.columns(2)
+    resultado_juego = st.session_state.get("resultado_juego")
+
+    with jc1:
+        if st.button(nombre_a, use_container_width=True):
+            st.session_state["resultado_juego"] = "A"
+            st.rerun()
+    with jc2:
+        if st.button(nombre_b, use_container_width=True):
+            st.session_state["resultado_juego"] = "B"
+            st.rerun()
+
+    if resultado_juego:
+        ganador = nombre_a if watts_a > watts_b else nombre_b
+        acerto = (resultado_juego == "A" and watts_a > watts_b) or (resultado_juego == "B" and watts_b > watts_a)
+        if acerto:
+            st.success(f"🎉 ¡Correcto! **{ganador}** consume más: {nombre_a} usa {watts_a}W, {nombre_b} usa {watts_b}W.")
+        else:
+            st.error(f"❌ No era ese. **{ganador}** consume más: {nombre_a} usa {watts_a}W, {nombre_b} usa {watts_b}W.")
+        if st.button("🔄 Jugar de nuevo"):
+            st.session_state["par_juego"] = random.sample(list(aparatos_juego.items()), 2)
+            st.session_state["resultado_juego"] = None
+            st.rerun()
 
 if auto_refresh:
     time.sleep(5)
