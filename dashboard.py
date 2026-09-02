@@ -146,7 +146,7 @@ with col_sello:
     </div>
     """, unsafe_allow_html=True)
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["📈 Gráficos", "🔍 Patrones de consumo", "📝 Informe completo", "📋 Datos", "ℹ️ Proyecto"])
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📈 Gráficos", "🔍 Patrones de consumo", "📝 Informe completo", "📋 Datos", "ℹ️ Proyecto", "🎮 Simulador"])
 
 # ======================================================================
 # TAB 1 - GRAFICOS
@@ -441,6 +441,50 @@ with tab5:
     **Sensores utilizados:** LDR (luz), DHT22 (temperatura y humedad), ACS712 (corriente eléctrica)
     **Alimentación:** panel solar con batería de respaldo
     """)
+
+# ======================================================================
+# TAB 6 - SIMULADOR INTERACTIVO
+# ======================================================================
+with tab6:
+    st.subheader("🎮 Simulador: ¿Qué pasaría si...?")
+    st.caption("Ajustá los parámetros de un aula y descubrí cuánto se podría ahorrar con control automático de iluminación basado en luz natural (como el sensor LDR de este proyecto).")
+
+    col_sliders, col_resultado = st.columns([1, 1])
+
+    with col_sliders:
+        st.markdown("**Parámetros del aula**")
+        horas = st.slider("Horas de iluminación por día", 2, 10, 6)
+        cantidad = st.slider("Cantidad de luminarias", 5, 40, 15)
+        potencia_led = st.slider("Potencia por luminaria (W)", 10, 60, 36)
+        dias_anio = st.slider("Días de uso al año (ciclo lectivo)", 100, 220, 180)
+        st.markdown("---")
+        ahorro_pct = st.slider(
+            "Ahorro estimado con sensores de luz automáticos (%)",
+            0, 50, 22,
+            help="Basado en la práctica de 'daylight harvesting': apagar o atenuar luces artificiales cuando el sensor LDR detecta suficiente luz natural."
+        )
+        precio_kwh = st.number_input("Precio del kWh ($ARS, opcional para estimar $)", value=150.0, step=10.0)
+
+    consumo_kwh_anio = (cantidad * potencia_led * horas * dias_anio) / 1000
+    ahorro_kwh_anio = consumo_kwh_anio * (ahorro_pct / 100)
+    consumo_optimizado = consumo_kwh_anio - ahorro_kwh_anio
+    ahorro_pesos = ahorro_kwh_anio * precio_kwh
+    co2_evitado_sim = ahorro_kwh_anio * factor_co2
+
+    with col_resultado:
+        st.markdown("**Resultado estimado**")
+        st.metric("🔌 Consumo actual estimado", f"{consumo_kwh_anio:,.0f} kWh/año")
+        st.metric("💡 Ahorro potencial", f"{ahorro_kwh_anio:,.0f} kWh/año", delta=f"-{ahorro_pct}%")
+        st.metric("✅ Consumo optimizado", f"{consumo_optimizado:,.0f} kWh/año")
+        st.markdown("---")
+        st.metric("💰 Ahorro estimado en pesos", f"${ahorro_pesos:,.0f} ARS/año")
+        st.metric("🌱 CO₂ evitado estimado", f"{co2_evitado_sim:,.0f} kg/año")
+
+    st.info(
+        "ℹ️ El % de ahorro es un valor orientativo y ajustable, inspirado en el hallazgo real de este "
+        "proyecto sobre la relación entre luz natural y consumo eléctrico. No representa una medición "
+        "directa, sino una proyección para explorar distintos escenarios."
+    )
 
 if auto_refresh:
     time.sleep(5)
