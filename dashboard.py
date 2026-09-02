@@ -539,7 +539,7 @@ with tab7:
 
     st.markdown("---")
     st.subheader("🎮 Elegí un juego")
-    st.caption("Si sacás el puntaje perfecto en cualquiera, mostranos la pantalla y te ganás un caramelo de dulce de leche 🍬")
+    st.caption("Si sacás el puntaje perfecto en cualquiera, mostranos la pantalla... ¡hay una sorpresa esperándote! 🎁")
 
     import random
 
@@ -658,13 +658,13 @@ with tab7:
 
     st.markdown("")
     if juego_elegido == "⚡🆚⚡ ¿Cuál gasta más?":
-        render_quiz("quiz1", PREGUNTAS_CUAL_GASTA_MAS, "🍬 ¡PERFECTO! Mostrale esta pantalla a alguien del stand para tu caramelo de dulce de leche.")
+        render_quiz("quiz1", PREGUNTAS_CUAL_GASTA_MAS, "🎁 ¡PERFECTO! Mostrale esta pantalla a alguien del stand... tenemos algo para vos.")
     elif juego_elegido == "🤔 Verdadero o Falso: mitos de ahorro":
-        render_quiz("quiz2", PREGUNTAS_MITOS, "🍬 ¡PERFECTO! Desarmaste todos los mitos. Mostrale esta pantalla a alguien del stand para tu caramelo.")
+        render_quiz("quiz2", PREGUNTAS_MITOS, "🎁 ¡PERFECTO! Desarmaste todos los mitos. Mostrale esta pantalla a alguien del stand.")
     elif juego_elegido == "🎯 Adiviná el rango":
-        render_quiz("quiz3", PREGUNTAS_RANGO, "🍬 ¡PERFECTO! Tenés un ojo clínico para los watts. Mostrale esta pantalla a alguien del stand para tu caramelo.")
+        render_quiz("quiz3", PREGUNTAS_RANGO, "🎁 ¡PERFECTO! Tenés un ojo clínico para los watts. Mostrale esta pantalla a alguien del stand.")
     else:
-        render_quiz("quiz4", PREGUNTAS_TECNICA, "🍬 ¡PERFECTO! Sabés tanto como nosotros del proyecto. Mostrale esta pantalla a alguien del stand para tu caramelo.")
+        render_quiz("quiz4", PREGUNTAS_TECNICA, "🎁 ¡PERFECTO! Sabés tanto como nosotros del proyecto. Mostrale esta pantalla a alguien del stand.")
 
 if auto_refresh:
     time.sleep(5)
