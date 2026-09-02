@@ -538,45 +538,133 @@ with tab7:
     st.caption("Valores orientativos basados en horas de uso típicas de cada aparato en un hogar promedio.")
 
     st.markdown("---")
-    st.subheader("⚡🆚⚡ ¿Cuál gasta más?")
-    st.caption("Elegí cuál de los dos aparatos creés que consume más energía, y descubrí la respuesta.")
+    st.subheader("🎮 Elegí un juego")
+    st.caption("Si sacás el puntaje perfecto en cualquiera, mostranos la pantalla y te ganás un caramelo de dulce de leche 🍬")
 
     import random
-    aparatos_juego = {
-        "🧊 Heladera": 150, "❄️ Aire acondicionado": 1500, "💇 Secador de pelo": 1200,
-        "🫖 Pava eléctrica": 1500, "🍕 Microondas": 1000, "👕 Plancha de ropa": 1000,
-        "📺 TV LED": 100, "💻 Computadora de escritorio": 200, "💡 Lamparita LED": 10,
-        "🌀 Ventilador": 60, "📱 Cargador de celular": 5, "🧺 Lavarropas": 500,
-    }
 
-    if "par_juego" not in st.session_state:
-        st.session_state["par_juego"] = random.sample(list(aparatos_juego.items()), 2)
+    def render_quiz(key_prefix, preguntas, premio_msg):
+        """preguntas: lista de (prompt, [opciones], indice_correcto, explicacion)"""
+        ronda_key = f"{key_prefix}_ronda"
+        score_key = f"{key_prefix}_score"
+        orden_key = f"{key_prefix}_orden"
+        respondido_key = f"{key_prefix}_respondido"
+        terminado_key = f"{key_prefix}_terminado"
+        correcto_key = f"{key_prefix}_correcto"
+        total = len(preguntas)
 
-    (nombre_a, watts_a), (nombre_b, watts_b) = st.session_state["par_juego"]
+        def iniciar():
+            orden = list(range(total))
+            random.shuffle(orden)
+            st.session_state[orden_key] = orden
+            st.session_state[ronda_key] = 0
+            st.session_state[score_key] = 0
+            st.session_state[respondido_key] = False
+            st.session_state[terminado_key] = False
 
-    jc1, jc2 = st.columns(2)
-    resultado_juego = st.session_state.get("resultado_juego")
+        if ronda_key not in st.session_state:
+            iniciar()
 
-    with jc1:
-        if st.button(nombre_a, use_container_width=True):
-            st.session_state["resultado_juego"] = "A"
-            st.rerun()
-    with jc2:
-        if st.button(nombre_b, use_container_width=True):
-            st.session_state["resultado_juego"] = "B"
-            st.rerun()
+        if not st.session_state[terminado_key]:
+            idx = st.session_state[orden_key][st.session_state[ronda_key]]
+            prompt, opciones, correcta_idx, explicacion = preguntas[idx]
 
-    if resultado_juego:
-        ganador = nombre_a if watts_a > watts_b else nombre_b
-        acerto = (resultado_juego == "A" and watts_a > watts_b) or (resultado_juego == "B" and watts_b > watts_a)
-        if acerto:
-            st.success(f"🎉 ¡Correcto! **{ganador}** consume más: {nombre_a} usa {watts_a}W, {nombre_b} usa {watts_b}W.")
+            st.markdown(f"**Pregunta {st.session_state[ronda_key] + 1} de {total}** — Puntaje: {st.session_state[score_key]}/{total}")
+            st.progress(st.session_state[ronda_key] / total)
+            st.markdown(f"#### {prompt}")
+
+            cols = st.columns(len(opciones))
+            clickeado = None
+            for i, (col, opcion) in enumerate(zip(cols, opciones)):
+                with col:
+                    if st.button(opcion, use_container_width=True,
+                                 disabled=st.session_state[respondido_key],
+                                 key=f"{key_prefix}_btn_{st.session_state[ronda_key]}_{i}"):
+                        clickeado = i
+
+            if clickeado is not None and not st.session_state[respondido_key]:
+                st.session_state[respondido_key] = True
+                correcto = (clickeado == correcta_idx)
+                st.session_state[correcto_key] = correcto
+                if correcto:
+                    st.session_state[score_key] += 1
+                st.rerun()
+
+            if st.session_state[respondido_key]:
+                if st.session_state[correcto_key]:
+                    st.success(f"🎉 ¡Correcto! {explicacion}")
+                else:
+                    st.error(f"❌ La respuesta correcta era **{opciones[correcta_idx]}**. {explicacion}")
+                texto_boton = "Siguiente ➡️" if st.session_state[ronda_key] < total - 1 else "Ver resultado 🏁"
+                if st.button(texto_boton, key=f"{key_prefix}_next_{st.session_state[ronda_key]}"):
+                    st.session_state[ronda_key] += 1
+                    st.session_state[respondido_key] = False
+                    if st.session_state[ronda_key] >= total:
+                        st.session_state[terminado_key] = True
+                    st.rerun()
         else:
-            st.error(f"❌ No era ese. **{ganador}** consume más: {nombre_a} usa {watts_a}W, {nombre_b} usa {watts_b}W.")
-        if st.button("🔄 Jugar de nuevo"):
-            st.session_state["par_juego"] = random.sample(list(aparatos_juego.items()), 2)
-            st.session_state["resultado_juego"] = None
-            st.rerun()
+            score = st.session_state[score_key]
+            st.markdown(f"## Resultado final: {score}/{total}")
+            if score == total:
+                st.balloons()
+                st.success(premio_msg)
+            elif score >= total - 1:
+                st.info(f"¡Muy bien! {score}/{total}. Te faltó una nomás — ¿probamos de nuevo?")
+            else:
+                st.warning(f"Sacaste {score}/{total}. ¡Animate a probar otra vez!")
+            if st.button("🔄 Jugar de nuevo", key=f"{key_prefix}_reset"):
+                iniciar()
+                st.rerun()
+
+    PREGUNTAS_CUAL_GASTA_MAS = [
+        ("¿Cuál de estos dos consume más potencia?", ["🧊 Heladera", "❄️ Aire acondicionado"], 1, "❄️ Aire acondicionado usa ~1500W, la 🧊 Heladera usa ~150W."),
+        ("¿Cuál de estos dos consume más potencia?", ["💇 Secador de pelo", "🫖 Pava eléctrica"], 1, "🫖 Pava eléctrica usa ~1500W, el 💇 Secador de pelo ~1200W."),
+        ("¿Cuál de estos dos consume más potencia?", ["🍕 Microondas", "👕 Plancha de ropa"], 1, "👕 Plancha ~1200W, 🍕 Microondas ~1000W."),
+        ("¿Cuál de estos dos consume más potencia?", ["💻 Computadora de escritorio", "🌀 Ventilador"], 0, "💻 Computadora ~200W, 🌀 Ventilador ~60W."),
+        ("¿Cuál de estos dos consume más potencia?", ["📱 Cargador de celular", "💡 Lamparita LED"], 1, "💡 Lamparita LED ~10W, 📱 Cargador de celular vacío ~5W."),
+    ]
+
+    PREGUNTAS_MITOS = [
+        ("Dejar el cargador de celular enchufado sin el celular gasta mucha energía", ["Verdadero", "Falso"], 1, "Un cargador vacío consume menos de 0.5W, prácticamente nada."),
+        ("Bajar la persiana en verano ayuda a gastar menos aire acondicionado", ["Verdadero", "Falso"], 0, "Menos sol entrando significa menos calor que el aire tiene que compensar."),
+        ("Las heladeras viejas gastan más que las nuevas", ["Verdadero", "Falso"], 0, "La eficiencia energética de los electrodomésticos mejoró muchísimo en las últimas décadas."),
+        ("Dejar la computadora en modo suspensión gasta lo mismo que apagada", ["Verdadero", "Falso"], 1, "La suspensión consume bastante menos que estar prendida, aunque no es exactamente cero."),
+        ("Los aparatos con una lucecita 'standby' prendida no consumen nada", ["Verdadero", "Falso"], 1, "Ese consumo fantasma existe de verdad, se lo conoce como 'standby power'."),
+        ("Un aire acondicionado consume más al arrancar que mientras ya está enfriando", ["Verdadero", "Falso"], 0, "El pico de arranque del compresor es mayor que el consumo en régimen estable — lo mismo que vimos con la pava."),
+    ]
+
+    PREGUNTAS_RANGO = [
+        ("🧊 ¿Cuánto consume una heladera hogareña?", ["10-50W", "100-200W", "1000-2000W"], 1, "Ronda los 150W en funcionamiento normal."),
+        ("❄️ ¿Cuánto consume un aire acondicionado split mediano?", ["100-300W", "500-900W", "1200-2500W"], 2, "Suele estar cerca de los 1500W."),
+        ("💻 ¿Cuánto consume una notebook?", ["30-90W", "200-400W", "800-1200W"], 0, "Las notebooks son bastante eficientes, entre 30 y 90W."),
+        ("📶 ¿Cuánto consume un router wifi?", ["5-15W", "50-100W", "300-500W"], 0, "Muy poco, entre 5 y 15W, por eso queda prendido todo el día sin problema."),
+        ("🍕 ¿Cuánto consume un microondas?", ["100-300W", "700-1200W", "2000-3000W"], 1, "Ronda los 1000W mientras calienta."),
+        ("👕 ¿Cuánto consume una plancha de ropa?", ["200-500W", "600-900W", "1000-1800W"], 2, "Suele estar entre 1000 y 1800W."),
+    ]
+
+    PREGUNTAS_TECNICA = [
+        ("¿Cómo mide la corriente el sensor ACS712, sin tocar el cable eléctricamente?", ["Contando electrones", "Detectando el campo magnético (efecto Hall)", "Midiendo la temperatura del cable"], 1, "Cualquier cable con corriente genera un campo magnético, y el ACS712 lo detecta sin contacto eléctrico directo."),
+        ("¿Por qué el LDR necesita una resistencia extra junto a él?", ["Para que no se rompa", "Porque el Arduino solo puede leer voltaje, no resistencia", "Es solo decorativo"], 1, "Se arma un divisor de voltaje para convertir el cambio de resistencia del LDR en un voltaje que el Arduino sí puede leer."),
+        ("¿Qué significa que el cálculo de corriente use 'RMS'?", ["Un tipo de cable", "Un promedio especial para señales que oscilan, como la corriente alterna", "El nombre del sensor"], 1, "La corriente alterna cambia de dirección 50 veces por segundo; RMS resume bien toda esa onda en un solo número."),
+        ("¿Por qué el cable de tierra (verde-amarillo) nunca se corta?", ["Porque es el más caro", "Es una medida de seguridad, no forma parte del circuito normal", "Porque es decorativo"], 1, "La tierra descarga fallas eléctricas a modo de protección; cortarla elimina esa seguridad."),
+        ("¿Qué mide el sensor DHT22 en este proyecto?", ["Solo temperatura", "Temperatura y humedad", "Corriente eléctrica"], 1, "El DHT22 manda ambos datos por un solo cable de señal."),
+        ("¿Para qué sirve el panel solar en este proyecto?", ["Para que se vea más lindo", "Para alimentar el sistema de forma autónoma y con energía limpia", "Para medir la luz"], 1, "Permite que el nodo de medición funcione sin depender de un enchufe, alineado con el eje de energías limpias del proyecto."),
+    ]
+
+    juego_elegido = st.selectbox(
+        "¿Qué querés jugar?",
+        ["⚡🆚⚡ ¿Cuál gasta más?", "🤔 Verdadero o Falso: mitos de ahorro", "🎯 Adiviná el rango", "🔧 Trivia técnica de los sensores"]
+    )
+
+    st.markdown("")
+    if juego_elegido == "⚡🆚⚡ ¿Cuál gasta más?":
+        render_quiz("quiz1", PREGUNTAS_CUAL_GASTA_MAS, "🍬 ¡PERFECTO! Mostrale esta pantalla a alguien del stand para tu caramelo de dulce de leche.")
+    elif juego_elegido == "🤔 Verdadero o Falso: mitos de ahorro":
+        render_quiz("quiz2", PREGUNTAS_MITOS, "🍬 ¡PERFECTO! Desarmaste todos los mitos. Mostrale esta pantalla a alguien del stand para tu caramelo.")
+    elif juego_elegido == "🎯 Adiviná el rango":
+        render_quiz("quiz3", PREGUNTAS_RANGO, "🍬 ¡PERFECTO! Tenés un ojo clínico para los watts. Mostrale esta pantalla a alguien del stand para tu caramelo.")
+    else:
+        render_quiz("quiz4", PREGUNTAS_TECNICA, "🍬 ¡PERFECTO! Sabés tanto como nosotros del proyecto. Mostrale esta pantalla a alguien del stand para tu caramelo.")
 
 if auto_refresh:
     time.sleep(5)
